@@ -178,10 +178,7 @@ module Spree
 
       options[:with].each do |field, value|
         variant.send("#{field}=", value) if variant.respond_to?("#{field}=")
-        applicable_option_type = OptionType.find(:first, :conditions => [
-          "lower(presentation) = ? OR lower(name) = ?",
-          field.to_s, field.to_s]
-        )
+        applicable_option_type = OptionType.where("lower(presentation) = ? OR lower(name) = ?",field.to_s, field.to_s).first
         if applicable_option_type.is_a?(OptionType)
           product.option_types << applicable_option_type unless product.option_types.include?(applicable_option_type)
           opt_value = applicable_option_type.option_values.where(["presentation = ? OR name = ?", value, value]).first
@@ -198,6 +195,16 @@ module Spree
         #Associate our new variant with any new taxonomies
         ProductImport.settings[:taxonomy_fields].each do |field|
           associate_product_with_taxon(variant.product, field.to_s, options[:with][field.to_sym])
+        end
+
+        #Associate our new variant with any stock item
+        source_location = Spree::StockLocation.find_by(default: true)
+        stock_item = variant.stock_items.where(stock_location_id: source_location.id).first
+
+        if options[:with][:on_hand].nil?
+          stock_item.set_count_on_hand(0)
+        else
+          stock_item.set_count_on_hand(options[:with][:on_hand])
         end
 
         #Finally, attach any images that have been specified
@@ -307,7 +314,7 @@ module Spree
         #Stock item
         source_location = Spree::StockLocation.find_by(default: true)
         stock_item = product.stock_items.where(stock_location_id: source_location.id).first
-        
+
         if params_hash[:on_hand].nil?
           stock_item.set_count_on_hand(0)
         else
