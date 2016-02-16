@@ -178,10 +178,7 @@ module Spree
 
       options[:with].each do |field, value|
         variant.send("#{field}=", value) if variant.respond_to?("#{field}=")
-        applicable_option_type = OptionType.find(:first, :conditions => [
-          "lower(presentation) = ? OR lower(name) = ?",
-          field.to_s, field.to_s]
-        )
+        applicable_option_type = OptionType.where("lower(presentation) = ? OR lower(name) = ?",field.to_s, field.to_s).first
         if applicable_option_type.is_a?(OptionType)
           product.option_types << applicable_option_type unless product.option_types.include?(applicable_option_type)
           opt_value = applicable_option_type.option_values.where(["presentation = ? OR name = ?", value, value]).first
